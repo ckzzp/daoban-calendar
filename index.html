@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="倒班日历" />
+<meta name="theme-color" content="#f6f8f6" />
+<meta name="description" content="倒班月历：农历、节气、节日与倒班信息" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<title>倒班日历</title>
+<style>
+  :root{--cell-min-h:120px;--gap:6px}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","微软雅黑","Arial",sans-serif;
+    background:#f6f8f6;color:#222;
+    /* iPhone 全面屏安全区 */
+    padding:calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+    -webkit-tap-highlight-color:transparent;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:580px;margin:0 auto}
+  header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  select,button{font-size:15px;padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;appearance:none;-webkit-appearance:none}
+  select{background-image:linear-gradient(45deg,transparent 50%,#777 50%),linear-gradient(135deg,#777 50%,transparent 50%);background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:26px}
+  #btnToday{background:#eaf4ff;border-color:#8ec8ff;color:#0b6bb5;font-weight:600}
+  .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap);margin-bottom:6px}
+  .weekday{font-weight:700;text-align:center;padding:8px 0;background:#eaf0ea;border-radius:6px}
+  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#fff;padding:6px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+  .cell{min-height:var(--cell-min-h);padding:6px;border:1px solid #eee;border-radius:8px;background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start}
+  .g{font-size:20px;font-weight:700;margin-bottom:4px;line-height:1.1}
+  .l{font-size:12px;color:#666;line-height:1.2}
+  .subnote,.shift{font-size:9px;margin-top:auto;color:#333;text-align:left;white-space:nowrap;letter-spacing:0}
+  .today{outline:3px solid rgba(0,160,200,.18)}
+  .festival{color:#d9534f;font-weight:700}
+  .term-small{color:#16a511;font-weight:700;font-size:11px;display:block;margin-top:2px}
+  .cell.today{background:#dff3ff !important;border:1px solid #8ec8ff}
+
+  /* ===== iPhone / 移动端适配 ===== */
+  @media (max-width:500px){
+    :root{--cell-min-h:104px;--gap:4px}
+    .g{font-size:20px}
+    .l{font-size:12px}
+    .term-small{font-size:12px}
+    .subnote,.shift{font-size:10px}
+    .cell{padding:4px;gap:2px}
+    .calendar{gap:3px;padding:4px}
+    .weekdays{gap:3px}
+    .weekday{padding:6px 0;font-size:15px}
+    body{padding:calc(6px + env(safe-area-inset-top)) calc(6px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left))}
+  }
+  @media (max-width:360px){
+    :root{--cell-min-h:96px}
+    .g{font-size:18px}
+    .l{font-size:11px}
+    .term-small{font-size:11px}
+    .subnote,.shift{font-size:9px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <select id="selYear"></select> 年
+    <select id="selMonth"></select> 月
+    <button id="btnToday">今天</button>
+  </header>
+
+  <div id="weekdayRow" class="calendar"></div>
+  <div id="grid" class="calendar" role="grid" aria-label="月历"></div>
+</div>
+
+<script>
+/* ====== 农历基础数据与工具 ====== */
+var lunarInfo = new Array(
+0x4bd8,0x4ae0,0xa570,0x54d5,0xd260,0xd950,0x5554,0x56af,0x9ad0,0x55d2,
+0x4ae0,0xa5b6,0xa4d0,0xd250,0xd295,0xb54f,0xd6a0,0xada2,0x95b0,0x4977,
+0x497f,0xa4b0,0xb4b5,0x6a50,0x6d40,0xab54,0x2b6f,0x9570,0x52f2,0x4970,
+0x6566,0xd4a0,0xea50,0x6a95,0x5adf,0x2b60,0x86e3,0x92ef,0xc8d7,0xc95f,
+0xd4a0,0xd8a6,0xb55f,0x56a0,0xa5b4,0x25df,0x92d0,0xd2b2,0xa950,0xb557,
+0x6ca0,0xb550,0x5355,0x4daf,0xa5b0,0x4573,0x52bf,0xa9a8,0xe950,0x6aa0,
+0xaea6,0xab50,0x4b60,0xaae4,0xa570,0x5260,0xf263,0xd950,0x5b57,0x56a0,
+0x96d0,0x4dd5,0x4ad0,0xa4d0,0xd4d4,0xd250,0xd558,0xb540,0xb6a0,0x95a6,
+0x95bf,0x49b0,0xa974,0xa4b0,0xb27a,0x6a50,0x6d40,0xaf46,0xab60,0x9570,
+0x4af5,0x4970,0x64b0,0x74a3,0xea50,0x6b58,0x5ac0,0xab60,0x96d5,0x92e0,
+0xc960,0xd954,0xd4a0,0xda50,0x7552,0x56a0,0xabb7,0x25d0,0x92d0,0xcab5,
+0xa950,0xb4a0,0xbaa4,0xad50,0x55d9,0x4ba0,0xa5b0,0x5176,0x52bf,0xa930,
+0x7954,0x6aa0,0xad50,0x5b52,0x4b60,0xa6e6,0xa4e0,0xd260,0xea65,0xd530,
+0x5aa0,0x76a3,0x96d0,0x4afb,0x4ad0,0xa4d0,0xd0b6,0xd25f,0xd520,0xdd45,
+0xb5a0,0x56d0,0x55b2,0x49b0,0xa577,0xa4b0,0xaa50,0xb255,0x6d2f,0xada0,
+0x4b63,0x937f,0x49f8,0x4970,0x64b0,0x68a6,0xea5f,0x6b20,0xa6c4,0xaaef,
+0x92e0,0xd2e3,0xc960,0xd557,0xd4a0,0xda50,0x5d55,0x56a0,0xa6d0,0x55d4,
+0x52d0,0xa9b8,0xa950,0xb4a0,0xb6a6,0xad50,0x55a0,0xaba4,0xa5b0,0x52b0,
+0xb273,0x6930,0x7337,0x6aa0,0xad50,0x4b55,0x4b6f,0xa570,0x54e4,0xd260,
+0xe968,0xd520,0xdaa0,0x6aa6,0x56df,0x4ae0,0xa9d4,0xa4d0,0xd150,0xf252,
+0xd520);
+
+var nStr1 = new Array('日','一','二','三','四','五','六','七','八','九','十');
+var nStr2 = new Array('初','十','廿','三','卅');
+
+function lYearDays(y) {
+   var i, sum = 348;
+   for(i=0x8000; i>0x8; i>>=1) sum += (lunarInfo[y-1900] & i)? 1: 0;
+   return(sum+leapDays(y));
+}
+function leapDays(y) {
+   if(leapMonth(y)) return( (lunarInfo[y-1899]&0xf)==0xf? 30: 29);
+   else return(0);
+}
+function leapMonth(y) {
+   var lm = lunarInfo[y-1900] & 0xf;
+   return(lm==0xf?0:lm);
+}
+function monthDays(y,m) {
+   return( (lunarInfo[y-1900] & (0x10000>>m))? 30: 29 );
+}
+
+function cDay(d){
+   var s;
+   switch (d) {
+      case 10: s = '初十'; break;
+      case 20: s = '二十'; break;
+      case 30: s = '三十'; break;
+      default :
+         s = nStr2[Math.floor(d/10)];
+         s += nStr1[d%10];
+   }
+   return(s);
+}
+
+function Lunar(date){
+  var offset=(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()) - Date.UTC(1900,0,31))/86400000;
+  var i, temp;
+  for(i=1900; i<2100 && offset>0; i++){ temp=lYearDays(i); offset-=temp; }
+  if(offset<0){ offset+=temp; i--; }
+  this.year = i;
+  var leap = leapMonth(i); this.isLeap = false;
+  for(i=1; i<13 && offset>0; i++){
+    if(leap>0 && i==(leap+1) && this.isLeap==false){
+      --i; this.isLeap = true; temp = ( (lunarInfo[this.year-1900]) & 0xf ) == 0xf ? 30 : 29;
+    } else temp = monthDays(this.year, i);
+    if(this.isLeap==true && i==(leap+1)) this.isLeap = false;
+    offset -= temp;
+  }
+  if(offset<0){ offset += temp; i--; }
+  this.month = i; this.day = offset + 1;
+}
+
+/* ====== 24节气 ====== */
+var solarTerm=[
+  "小寒","大寒","立春","雨水","惊蛰","春分",
+  "清明","谷雨","立夏","小满","芒种","夏至",
+  "小暑","大暑","立秋","处暑","白露","秋分",
+  "寒露","霜降","立冬","小雪","大雪","冬至"
+];
+var sTermInfo=[0,21208,42467,63836,85337,107014,128867,150921,173149,195551,218072,
+240693,263343,285989,308563,331033,353350,375494,397447,419210,440795,462224,483532,504758];
+
+function getSolarTerm(year, month, day){
+  var base = Date.UTC(1900,0,6,2,5);
+  var offset = 31556925974.7;
+  var t1 = base + offset*(year-1900) + sTermInfo[month*2]*60000;
+  var t2 = base + offset*(year-1900) + sTermInfo[month*2+1]*60000;
+  var d1 = new Date(t1), d2 = new Date(t2);
+  if(d1.getUTCDate() === day) return solarTerm[month*2];
+  if(d2.getUTCDate() === day) return solarTerm[month*2+1];
+  return "";
+}
+
+/* ====== 倒班算法 ====== */
+function workListCalc(dt){
+  var beginday="1996/06/09", begindayN="2000/03/28";
+  var d=new Date(dt);
+  if(d < new Date(begindayN)){
+    var yushu = ((d - new Date(beginday))/86400000) % 8;
+    if(yushu<0) yushu += 8;
+    return ["白中空夜","白中夜休","中空夜白","中夜休白","空夜白中","夜休白中","夜白中空","休白中夜"][Math.floor(yushu)];
+  } else {
+    var yushu = ((d - new Date(begindayN))/86400000) % 4;
+    if(yushu<0) yushu += 4;
+    return ["白夜空休","夜空休白","空休白夜","休白夜空"][Math.floor(yushu)];
+  }
+}
+
+/* ====== 节日判断（农历节日） ====== */
+function getLunarFestival(L){
+  if(L.isLeap) return "";
+  var m = L.month, d = L.day;
+  if(m === 12){
+    var lastDay = monthDays(L.year, 12);
+    if(d === lastDay) return "除夕";
+  }
+  if(m===1 && d===1) return "春节";
+  if(m===1 && d===15) return "元宵节";
+  if(m===5 && d===5) return "端午节";
+  if(m===7 && d===7) return "七夕";
+  if(m===8 && d===15) return "中秋节";
+  if(m===9 && d===9) return "重阳节";
+  if(m===12 && d===8) return "腊八节";
+  return "";
+}
+
+/* ====== UI 渲染 ====== */
+var today=new Date();
+var tY = today.getFullYear(), tM = today.getMonth(), tD = today.getDate();
+
+var selYear = document.getElementById("selYear");
+var selMonth = document.getElementById("selMonth");
+var grid = document.getElementById("grid");
+var weekdayRow = document.getElementById("weekdayRow");
+
+function buildControls(){
+  for(var y=1900; y<=2100; y++){
+    var opt = document.createElement("option");
+    opt.value = y; opt.textContent = y;
+    if(y === tY) opt.selected = true;
+    selYear.appendChild(opt);
+  }
+  for(var m=1; m<=12; m++){
+    var opt = document.createElement("option");
+    opt.value = m-1; opt.textContent = m;
+    if(m-1 === tM) opt.selected = true;
+    selMonth.appendChild(opt);
+  }
+  document.getElementById("btnToday").addEventListener("click", function(){
+    selYear.value = tY; selMonth.value = tM;
+    renderCalendar(tY, tM);
+  });
+}
+
+function renderWeekHeader(){
+  weekdayRow.innerHTML = '';
+  var weekNames = ['日','一','二','三','四','五','六'];
+  for(var i=0;i<7;i++){
+    var w = document.createElement('div');
+    w.className = 'weekday';
+    w.textContent = weekNames[i];
+    if(i === 0 || i === 6){
+        w.style.color = "#d9534f";
+        w.style.fontWeight = "700";
+    }
+    weekdayRow.appendChild(w);
+  }
+}
+
+function renderCalendar(year, month){
+  grid.innerHTML = '';
+  var first = new Date(year, month, 1).getDay();
+  var days = new Date(year, month+1, 0).getDate();
+
+  for(var i=0;i<first;i++){
+    var empty = document.createElement('div'); empty.className='cell';
+    grid.appendChild(empty);
+  }
+
+  for(var d=1; d<=days; d++){
+    (function(d){
+      var cell = document.createElement('div'); cell.className='cell'; cell.setAttribute('role','gridcell');
+
+      var g = document.createElement('div'); g.className='g'; g.textContent = d;
+
+      var weekday = new Date(year, month, d).getDay();
+      if(weekday === 0 || weekday === 6){
+        g.style.color = "#d9534f";
+      }
+
+      var l = document.createElement('div'); l.className='l';
+
+      var L;
+      try { L = new Lunar(new Date(year, month, d)); } catch(e) { L = null; }
+
+      var term = getSolarTerm(year, month, d);
+      var festival = L ? getLunarFestival(L) : '';
+
+      if(festival){
+        l.innerHTML = '<span class="festival">'+festival+'</span>' + (term ? '<span class="term-small">'+term+'</span>' : '');
+      } else if(term){
+        l.innerHTML = '<span class="term-small">'+term+'</span>';
+      } else if(L){
+        if(L.day === 1){
+          l.textContent = (L.isLeap ? '闰' : '') + L.month + '月';
+        } else {
+          l.textContent = cDay(L.day);
+        }
+      } else {
+        l.textContent = '';
+      }
+
+      var fixedGroup = document.createElement('div'); fixedGroup.className='subnote'; fixedGroup.textContent='甲乙丙丁';
+
+      var dtStr = year + '/' + (month+1) + '/' + d;
+      var shift = workListCalc(dtStr);
+      var sh = document.createElement('div'); sh.className='shift'; sh.textContent = shift;
+
+      if(year===tY && month===tM && d===tD) cell.classList.add('today');
+
+      cell.appendChild(g);
+      cell.appendChild(l);
+      cell.appendChild(fixedGroup);
+      cell.appendChild(sh);
+
+      cell.addEventListener('mouseenter', function(){ this.classList.add('hovered');});
+      cell.addEventListener('mouseleave', function(){ this.classList.remove('hovered');});
+
+      grid.appendChild(cell);
+    })(d);
+  }
+
+  var total = first + days;
+  var trailing = (7 - (total % 7)) % 7;
+  for(var j=0;j<trailing;j++){ var td=document.createElement('div'); td.className='cell'; grid.appendChild(td); }
+}
+
+selYear.addEventListener('change', function(){ renderCalendar(parseInt(this.value), parseInt(selMonth.value)); });
+selMonth.addEventListener('change', function(){ renderCalendar(parseInt(selYear.value), parseInt(this.value)); });
+
+/* ====== 初始化 ====== */
+buildControls();
+renderWeekHeader();
+renderCalendar(tY, tM);
+
+/* ====== PWA：注册 Service Worker（离线可用） ====== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.warn('SW 注册失败：', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
