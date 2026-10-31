@@ -14,7 +14,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 <title>倒班日历</title>
 <style>
-  :root{--cell-min-h:120px;--gap:6px}
+  /* 字号用 clamp(最小值, vw随屏宽自适应, 最大值)：手机/平板/大屏自动缩放 */
+  :root{--cell-min-h:clamp(96px,26.5vw,150px);--gap:6px}
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
@@ -27,40 +28,29 @@
   }
   .wrap{max-width:580px;margin:0 auto}
   header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-  select,button{font-size:15px;padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;appearance:none;-webkit-appearance:none}
+  select,button{font-size:clamp(14px,3.85vw,18px);padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;appearance:none;-webkit-appearance:none}
   select{background-image:linear-gradient(45deg,transparent 50%,#777 50%),linear-gradient(135deg,#777 50%,transparent 50%);background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:26px}
   #btnToday{background:#eaf4ff;border-color:#8ec8ff;color:#0b6bb5;font-weight:600}
   .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap);margin-bottom:6px}
-  .weekday{font-weight:700;text-align:center;padding:8px 0;background:#eaf0ea;border-radius:6px}
+  .weekday{font-weight:700;text-align:center;padding:8px 0;background:#eaf0ea;border-radius:6px;font-size:clamp(14px,3.85vw,19px)}
   .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#fff;padding:6px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
   .cell{min-height:var(--cell-min-h);padding:6px;border:1px solid #eee;border-radius:8px;background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start}
-  .g{font-size:20px;font-weight:700;margin-bottom:4px;line-height:1.1}
-  .l{font-size:12px;color:#666;line-height:1.2}
-  .subnote,.shift{font-size:9px;margin-top:auto;color:#333;text-align:left;white-space:nowrap;letter-spacing:0}
+  .g{font-size:clamp(18px,5.13vw,28px);font-weight:700;margin-bottom:4px;line-height:1.1}
+  .l{font-size:clamp(11px,3.08vw,16px);color:#666;line-height:1.2}
+  .subnote,.shift{font-size:clamp(9px,2.56vw,13px);margin-top:auto;color:#333;text-align:left;white-space:nowrap;letter-spacing:0}
   .today{outline:3px solid rgba(0,160,200,.18)}
   .festival{color:#d9534f;font-weight:700}
-  .term-small{color:#16a511;font-weight:700;font-size:11px;display:block;margin-top:2px}
+  .term-small{color:#16a511;font-weight:700;font-size:clamp(11px,3.08vw,16px);display:block;margin-top:2px}
   .cell.today{background:#dff3ff !important;border:1px solid #8ec8ff}
 
-  /* ===== iPhone / 移动端适配 ===== */
+  /* ===== 移动端/小屏：仅微调间距（字号已随屏宽自适应） ===== */
   @media (max-width:500px){
-    :root{--cell-min-h:104px;--gap:4px}
-    .g{font-size:20px}
-    .l{font-size:12px}
-    .term-small{font-size:12px}
-    .subnote,.shift{font-size:10px}
+    :root{--gap:4px}
     .cell{padding:4px;gap:2px}
     .calendar{gap:3px;padding:4px}
     .weekdays{gap:3px}
-    .weekday{padding:6px 0;font-size:15px}
+    .weekday{padding:6px 0}
     body{padding:calc(6px + env(safe-area-inset-top)) calc(6px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left))}
-  }
-  @media (max-width:360px){
-    :root{--cell-min-h:96px}
-    .g{font-size:18px}
-    .l{font-size:11px}
-    .term-small{font-size:11px}
-    .subnote,.shift{font-size:9px}
   }
 </style>
 </head>
